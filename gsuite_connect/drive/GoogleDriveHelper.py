@@ -1,31 +1,73 @@
 from gsuite_connect.drive.GoogleDriveService import GoogleDriveService
 from googleapiclient.http import MediaFileUpload
+from typing import Optional, Dict, Any
 
 
 class GoogleDriveHelper:
+    """
+    A helper class for interacting with Google Drive, allowing for file uploads,
+    folder creation, and permission management.
 
-    def __init__(self, folder_name):
+    Attributes:
+        folder_name (str): The name of the top-level folder in Google Drive.
+        drive_service (GoogleDriveService): The service object for interacting with Google Drive API.
+        top_level_folder_id (str): The ID of the top-level folder.
+    """
 
+    def __init__(self, folder_name: str) -> None:
+        """
+        Initializes the GoogleDriveHelper with the specified folder name.
+
+        Args:
+            folder_name (str): The name of the folder to be used as the top-level folder.
+        """
         self.folder_name = folder_name
         self.drive_service = GoogleDriveService().build()
         self.top_level_folder_id = self.get_folder_id()
 
     @staticmethod
-    def create_export_link(file_id):
+    def create_export_link(file_id: str) -> str:
+        """
+        Creates a direct download link for a file in Google Drive.
 
+        Args:
+            file_id (str): The ID of the file.
+
+        Returns:
+            str: A direct download link for the file.
+        """
         return f"https://drive.google.com/uc?export=download&id={file_id}"
 
-    def get_webview_link(self, file_id):
+    def get_webview_link(self, file_id: str) -> str:
+        """
+        Retrieves the web view link for a specified file.
 
+        Args:
+            file_id (str): The ID of the file.
+
+        Returns:
+            str: The web view link for the file.
+        """
         return (
             self.drive_service.files()
             .get(fileId=file_id, fields="webViewLink")
             .execute()["webViewLink"]
         )
 
-    def upload_image(self, image_name, parent_folder_id=None):
+    def upload_image(
+        self, image_name: str, parent_folder_id: Optional[str] = None
+    ) -> str:
+        """
+        Uploads an image to Google Drive.
 
-        #ToDo: check supported image types
+        Args:
+            image_name (str): The name of the image file to upload.
+            parent_folder_id (Optional[str]): The ID of the parent folder. If None, uses the top-level folder.
+
+        Returns:
+            str: The ID of the uploaded file.
+        """
+        # ToDo: check supported image types
 
         if not parent_folder_id:
             parent_folder_id = self.top_level_folder_id
@@ -40,14 +82,19 @@ class GoogleDriveHelper:
 
         return file.get("id")
 
-    def create_new_permission(self, file_id, permission):
+    def create_new_permission(
+        self, file_id: str, permission: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
-        new_permission = {
-            "role": "reader",
-            "type": "anyone"
-        }
-        """
+        Creates a new permission for a specified file.
 
+        Args:
+            file_id (str): The ID of the file.
+            permission (Dict[str, Any]): The permission details.
+
+        Returns:
+            Dict[str, Any]: The result of the permission creation.
+        """
         result = (
             self.drive_service.permissions()
             .create(fileId=file_id, body=permission)
@@ -56,8 +103,19 @@ class GoogleDriveHelper:
 
         return result
 
-    def create_new_folder(self, new_folder_name, parent_folder_id=None):
+    def create_new_folder(
+        self, new_folder_name: str, parent_folder_id: Optional[str] = None
+    ) -> str:
+        """
+        Creates a new folder in Google Drive.
 
+        Args:
+            new_folder_name (str): The name of the new folder.
+            parent_folder_id (Optional[str]): The ID of the parent folder. If None, uses the top-level folder.
+
+        Returns:
+            str: The ID of the newly created folder.
+        """
         if parent_folder_id:
             parents = [parent_folder_id]
         else:
@@ -70,12 +128,22 @@ class GoogleDriveHelper:
         }
 
         folder = (
-            self.drive_service.files().create(body=folder_metadata, fields="id").execute()
+            self.drive_service.files()
+            .create(body=folder_metadata, fields="id")
+            .execute()
         )
         return folder.get("id")
 
-    def get_folder_id(self):
+    def get_folder_id(self) -> str:
+        """
+        Retrieves the ID of the top-level folder based on the folder name.
 
+        Returns:
+            str: The ID of the folder.
+
+        Raises:
+            ValueError: If no folder with the specified name is found.
+        """
         folder_details = (
             self.drive_service.files()
             .list(
@@ -84,13 +152,24 @@ class GoogleDriveHelper:
             .execute()
         )
 
-        if not folder_details:
-            raise ValueError("No folder called {self.folder_name} is found")
+        if not folder_details.get("files"):
+            raise ValueError(f"No folder called {self.folder_name} is found")
 
         return folder_details["files"][0].get("id", None)
 
-    def create_basic_document(self, document_name, parent_folder_id=None):
+    def create_basic_document(
+        self, document_name: str, parent_folder_id: Optional[str] = None
+    ) -> str:
+        """
+        Creates a new Google Document.
 
+        Args:
+            document_name (str): The name of the document.
+            parent_folder_id (Optional[str]): The ID of the parent folder. If None, uses the top-level folder.
+
+        Returns:
+            str: The ID of the newly created document.
+        """
         if not parent_folder_id:
             parent_folder_id = self.top_level_folder_id
 
